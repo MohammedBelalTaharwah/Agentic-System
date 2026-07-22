@@ -51,6 +51,20 @@ class LogLevel(StrEnum):
     ERROR = "ERROR"
 
 
+class LogRenderer(StrEnum):
+    """Log renderer types.
+
+    Defines the possible log renderers for the application.
+
+    Attributes:
+        CONSOLE (str): Console log renderer.
+        JSON (str): JSON log renderer.
+    """
+
+    CONSOLE = "console"
+    JSON = "json"
+
+
 def get_environment() -> Environment:
     """Get the current environment.
 
@@ -101,18 +115,22 @@ ENV_DEFAULTS = {
     Environment.DEVELOPMENT: {
         "DEBUG": True,
         "LOG_LEVEL": LogLevel.DEBUG,
+        "LOG_RENDERER": LogRenderer.CONSOLE,
     },
     Environment.STAGING: {
         "DEBUG": False,
         "LOG_LEVEL": LogLevel.INFO,
+        "LOG_RENDERER": LogRenderer.JSON,
     },
     Environment.PRODUCTION: {
         "DEBUG": False,
         "LOG_LEVEL": LogLevel.WARNING,
+        "LOG_RENDERER": LogRenderer.JSON,
     },
     Environment.TEST: {
         "DEBUG": True,
         "LOG_LEVEL": LogLevel.DEBUG,
+        "LOG_RENDERER": LogRenderer.CONSOLE,
     },
 }
 
@@ -136,6 +154,7 @@ def parse_list_from_env(
 
     # Remove quotes if they exist
     value = value.strip("\"'")
+    
     # Handle single value case
     if delimiter not in value:
         return [value]
@@ -154,10 +173,30 @@ class Settings(BaseSettings):
     APP_ENV: Environment = Field(...)
     PROJECT_NAME: str = Field(..., max_length=100)
     VERSION: str = Field(...)
-    DEBUG: Optional[bool] = Field(default=None)
     PROJECT_ROOT: str = Field(...)
 
-    model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8")
+    # ==================================================
+    # Logging Settings
+    # ==================================================
+    DEBUG: Optional[bool] = Field(default=None)
+    LOG_LEVEL: Optional[LogLevel] = Field(default=None)
+    LOG_RENDERER: Optional[LogRenderer] = Field(default=None)
+    LOG_DIR: Optional[str] = Field(default="storage/logs")
+    LOG_MAX_BYTES: Optional[int] = Field(default=10 * 1024 * 1024)  # 10 MB
+    LOG_BACKUP_COUNT: Optional[int] = Field(default=10)
+
+#     # ==========================
+#     # Database (PostgreSQL)
+#     # ==========================
+#     POSTGRES_HOST: str = Field(...)
+#     POSTGRES_DB: str = Field(...)
+#     POSTGRES_USER: str = Field(...)
+#     POSTGRES_PORT: int = Field(...)
+#     POSTGRES_PASSWORD: str = Field(...)
+#     POSTGRES_POOL_SIZE: int = Field(...)
+#     POSTGRES_MAX_OVERFLOW: int = Field(...)
+
+#     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8")
 
     @model_validator(mode="after")
     def configure_environment_defaults(self):
@@ -210,7 +249,7 @@ class Settings(BaseSettings):
 
 
 # Create settings instance
-setting = Settings()  # type: ignore
+settings = Settings()  # type: ignore
 
 
 def main():
@@ -218,7 +257,7 @@ def main():
     print(
         f"Welcome from `{os.path.basename(__file__).split('.')[0]}` Module. Nothing to do ^_____^!"
     )
-    for key, value in setting.model_dump().items():
+    for key, value in settings.model_dump().items():
         print(f"{key}: {value}")
 
 
